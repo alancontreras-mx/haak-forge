@@ -28,6 +28,7 @@ class NessusParser(ParserBase):
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(path)
+        self._guard_file_size(path)
 
         tree = ET.parse(str(path))
         root = tree.getroot()

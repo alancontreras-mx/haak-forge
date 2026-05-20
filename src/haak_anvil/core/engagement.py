@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+_MAX_YAML_BYTES = 1024 * 1024  # 1 MB — un engagement.yaml legítimo nunca se acerca
+_ID_RE = re.compile(r"[\w-]{1,64}")
 
 
 class Engagement(BaseModel):
@@ -39,9 +43,24 @@ class Engagement(BaseModel):
     analyst: str = "Haak Cybersecurity Consulting"
     language: Literal["es-MX", "en-US", "pt-BR"] = "es-MX"
 
+    @field_validator("id")
+    @classmethod
+    def _id_must_be_path_safe(cls, v: str) -> str:
+        """`id` se usa como nombre de archivo de salida — sin separadores de ruta."""
+        if not _ID_RE.fullmatch(v):
+            raise ValueError(
+                "id solo admite letras, dígitos, guion y guion bajo (1-64 caracteres)"
+            )
+        return v
+
     @classmethod
     def from_yaml(cls, path: Path | str) -> "Engagement":
         path = Path(path)
+        size = path.stat().st_size
+        if size > _MAX_YAML_BYTES:
+            raise ValueError(
+                f"engagement YAML demasiado grande ({size} bytes > {_MAX_YAML_BYTES})"
+            )
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
 
         # Flatten nested structure if present (client.name -> client_name)

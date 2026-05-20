@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader
 
 from haak_anvil.core.models import ReportBundle
 from haak_anvil.core.severity import Severity
@@ -27,7 +27,10 @@ class HtmlRenderer(RendererBase):
     def __init__(self, template_name: str = "default.html.j2") -> None:
         self.env = Environment(
             loader=FileSystemLoader(_TEMPLATES_DIR),
-            autoescape=select_autoescape(["html", "xml"]),
+            # autoescape=True (no select_autoescape): la plantilla termina en
+            # `.j2`, extension que select_autoescape NO reconoce -> sin esto,
+            # ninguna variable se escapa y el HTML queda expuesto a XSS.
+            autoescape=True,
             trim_blocks=True,
             lstrip_blocks=True,
         )

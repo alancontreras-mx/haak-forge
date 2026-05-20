@@ -9,11 +9,14 @@ Stub for v0.1 — full implementation expands in Fase 2 with:
 
 from __future__ import annotations
 
+import re
+
 import httpx
 
 from haak_anvil.core.models import ReportBundle
 
 NVD_API = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+_CVE_ID_RE = re.compile(r"CVE-\d{4}-\d{4,7}", re.IGNORECASE)
 
 
 class CveEnricher:
@@ -36,6 +39,10 @@ class CveEnricher:
 
     @staticmethod
     async def _fetch_cve(cve_id: str, *, client: httpx.AsyncClient) -> dict | None:
+        # cve_id alimenta una peticion HTTP — validar el formato evita SSRF /
+        # inyeccion de parametros si la fuente del ID deja de ser confiable.
+        if not _CVE_ID_RE.fullmatch(cve_id):
+            return None
         try:
             r = await client.get(NVD_API, params={"cveId": cve_id})
             r.raise_for_status()
