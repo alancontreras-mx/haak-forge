@@ -15,6 +15,20 @@ _SEV_BADGE = {
 }
 
 
+def _md_escape(s: str) -> str:
+    """Neutraliza caracteres que rompen o inyectan estructura Markdown.
+
+    Hostnames, OS y banners provienen del activo escaneado — input no
+    confiable que puede contener `|`, saltos de línea o backslashes.
+    """
+    return (
+        s.replace("\\", "\\\\")
+        .replace("|", "\\|")
+        .replace("\r", " ")
+        .replace("\n", " ")
+    )
+
+
 class MarkdownRenderer(RendererBase):
     extension = "md"
 
@@ -68,8 +82,10 @@ class MarkdownRenderer(RendererBase):
         out.append("|---|---|---|---|")
         for a in bundle.assets:
             out.append(
-                f"| `{a.address}` | {a.hostname or '—'} | {a.os or '—'} | "
-                f"{a.open_port_count} |"
+                f"| `{_md_escape(a.address)}` "
+                f"| {_md_escape(a.hostname) if a.hostname else '—'} "
+                f"| {_md_escape(a.os) if a.os else '—'} "
+                f"| {a.open_port_count} |"
             )
         out.append("")
 
@@ -85,7 +101,7 @@ class MarkdownRenderer(RendererBase):
     @staticmethod
     def _render_finding(f: Finding) -> list[str]:
         out: list[str] = []
-        out.append(f"### {_SEV_BADGE[f.severity]} — {f.title}")
+        out.append(f"### {_SEV_BADGE[f.severity]} — {_md_escape(f.title)}")
         out.append("")
         meta = []
         if f.asset:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -22,7 +23,10 @@ class RendererBase(ABC):
         """Render and write to disk. Returns the written path."""
         path = Path(path)
         if path.is_dir() or path.suffix == "":
-            path = path / f"{bundle.engagement.id}.{self.extension}"
+            # engagement.id puede venir de un JSON bundle de terceros:
+            # sanitizar evita path traversal al construir el archivo de salida.
+            safe_id = re.sub(r"[^\w-]", "_", bundle.engagement.id) or "report"
+            path = path / f"{safe_id}.{self.extension}"
         content = self.render(bundle)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
